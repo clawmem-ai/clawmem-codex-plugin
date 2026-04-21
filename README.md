@@ -12,7 +12,7 @@ ClawMem for Codex is a repo-backed durable memory plugin that provisions a per-a
 git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/clawmem-codex-plugin
 ```
 
-The plugin must be a **sibling** of `~/.agents/`, not inside it. Codex resolves `source.path` in `marketplace.json` relative to the parent of `.agents/plugins/`; putting the plugin under `~/.agents/plugins/` makes the Codex Plugins UI fail with `plugin/read failed`.
+The plugin must be a **sibling** of `~/.agents/`, not inside it. Codex resolves `source.path` in `marketplace.json` relative to the marketplace root (the directory *containing* `.agents/`, i.e. two levels above `marketplace.json`) — not the directory where `marketplace.json` itself lives. So `"./clawmem-codex-plugin"` resolves to `~/clawmem-codex-plugin`; putting the plugin under `~/.agents/plugins/` makes the Codex Plugins UI fail with `plugin/read failed`.
 
 ### 2. Register the marketplace
 
