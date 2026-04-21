@@ -2,7 +2,7 @@
   "mcpServers": {
     "clawmem": {
       "command": "npx",
-      "args": ["-y", "github:clawmem-ai/clawmem-mcp-server"],
+      "args": ["-y", "clawmem-mcp-server"],
       "env": {
         "CLAWMEM_STATE_DIR": "~/.local/state/clawmem",
         "CLAWMEM_AGENT_PREFIX": "codex"
