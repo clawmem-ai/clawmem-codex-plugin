@@ -1,0 +1,25 @@
+{
+  "name": "clawmem",
+  "version": "0.1.0",
+  "description": "ClawMem durable memory bundle for Codex. Installs the Codex-specific ClawMem memory protocol skill and connects Codex to the hosted ClawMem MCP service.",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "ClawMem",
+    "shortDescription": "Repo-aware durable memory for Codex",
+    "longDescription": "ClawMem adds repo-aware durable memory to Codex. The bundled ClawMem Codex skill drives recall before answers and deliberate save, update, and forget actions after meaningful work, while the hosted MCP service executes memory operations against the ClawMem backend.",
+    "developerName": "ClawMem",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://clawmem.ai",
+    "defaultPrompt": [
+      "Search ClawMem for prior project decisions",
+      "Remember that this repo now uses pnpm and biome",
+      "What ClawMem memories do I already have about this project?"
+    ],
+    "brandColor": "#0F766E"
+  }
+}

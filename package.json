@@ -1,0 +1,20 @@
+{
+  "name": "clawmem-codex-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ClawMem durable memory plugin for Codex. Bundles a Codex skill and launches the shared clawmem-mcp-server over stdio.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clawmem-ai/clawmem-codex-plugin.git"
+  },
+  "bin": {
+    "clawmem": "./bin/clawmem.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
