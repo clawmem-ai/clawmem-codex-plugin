@@ -7,8 +7,8 @@
     {
       "name": "clawmem",
       "source": {
-        "source": "git",
-        "url": "https://github.com/clawmem-ai/clawmem-codex-plugin"
+        "source": "local",
+        "path": "./clawmem-codex-plugin"
       },
       "policy": {
         "installation": "AVAILABLE",

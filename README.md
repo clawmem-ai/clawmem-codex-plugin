@@ -8,36 +8,38 @@ ClawMem durable-memory plugin for Codex. Gives Codex repo-aware long-term memory
 
 ## Install
 
-### Via a marketplace (recommended)
+> Codex only supports `source: "local"` today — remote / git sources are on OpenAI's roadmap ("Self-serve plugin publishing and management are coming soon"). Until then, install via a local clone.
 
-Add the plugin to one of your Codex marketplaces (`~/.agents/plugins/marketplace.json` for personal use or `./.agents/plugins/marketplace.json` for a per-repo marketplace):
+### Personal marketplace (recommended)
 
-```json
+```sh
+# clone once
+git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/.agents/plugins/clawmem-codex-plugin
+# or symlink an existing clone so the marketplace relative path resolves
+ln -s /absolute/path/to/clawmem-codex-plugin ~/.agents/plugins/clawmem-codex-plugin
+```
+
+```jsonc
+// ~/.agents/plugins/marketplace.json
 {
   "name": "clawmem-ai",
   "interface": { "displayName": "ClawMem" },
   "plugins": [
     {
       "name": "clawmem",
-      "source": {
-        "source": "git",
-        "url": "https://github.com/clawmem-ai/clawmem-codex-plugin"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
+      "source": { "source": "local", "path": "./clawmem-codex-plugin" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
       "category": "Productivity"
     }
   ]
 }
 ```
 
-Then in Codex, open the Plugins UI and install `clawmem` from the `ClawMem` marketplace. Start a fresh session to load the MCP server and skill together.
+**Restart Codex** (marketplace changes are not live-reloaded), open the Plugins UI, switch to the `ClawMem` tab, install `clawmem`, then start a fresh session so the MCP server and skill load together.
 
-### Local development
+### Per-repo marketplace
 
-Clone the repo and use a `"source": "local"` marketplace entry (see [`examples/repo-marketplace.json`](examples/repo-marketplace.json) and [`examples/personal-marketplace.json`](examples/personal-marketplace.json)).
+Same shape, but drop `marketplace.json` at `<repo-root>/.agents/plugins/marketplace.json` and make sure the clone lives **inside** that repo root (e.g. `<repo>/clawmem-codex-plugin/` or a symlink there) — Codex resolves `source.path` relative to the marketplace root and refuses paths outside it.
 
 ## Architecture
 
