@@ -19,8 +19,10 @@ This path is the one to use. It wires up `memory_*` tools and drops the ClawMem 
 ### 1. Clone the plugin
 
 ```sh
-git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/.agents/plugins/clawmem-codex-plugin
+git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/clawmem-codex-plugin
 ```
+
+> **Why `~/` and not `~/.agents/plugins/`?** Codex resolves `source.path` in `marketplace.json` relative to the **marketplace root** (the directory *containing* `.agents/plugins/`), not the directory containing `marketplace.json` itself. With the marketplace at `~/.agents/plugins/marketplace.json`, `"./clawmem-codex-plugin"` resolves to `~/clawmem-codex-plugin`. Putting the plugin under `~/.agents/plugins/` will make the Codex Plugins UI fail with `plugin/read failed`.
 
 The plugin bundles the full [`skills/clawmem-codex/SKILL.md`](skills/clawmem-codex/SKILL.md) and references (routing, schema, communication, examples) — the behavioral discipline the bare-MCP install lacks.
 
@@ -41,6 +43,13 @@ Create or edit `~/.agents/plugins/marketplace.json`:
     }
   ]
 }
+```
+
+The resulting layout on disk:
+
+```
+~/.agents/plugins/marketplace.json     ← marketplace manifest
+~/clawmem-codex-plugin/                ← plugin (sibling of .agents, NOT inside it)
 ```
 
 ### 3. Install from the Codex Plugins UI
@@ -75,7 +84,7 @@ codex_hooks = true
 The plugin ships [`hooks/hooks.json`](hooks/hooks.json) with three handlers — UserPromptSubmit (recall), Stop (conversation mirror), PostToolUse (auto-memory sync on matching paths). Codex only reads hooks from `~/.codex/hooks.json` or `<project>/.codex/hooks.json`, so copy or merge:
 
 ```sh
-export CLAWMEM_CODEX_PLUGIN_ROOT=~/.agents/plugins/clawmem-codex-plugin
+export CLAWMEM_CODEX_PLUGIN_ROOT=~/clawmem-codex-plugin
 cp "$CLAWMEM_CODEX_PLUGIN_ROOT/hooks/hooks.json" ~/.codex/hooks.json
 ```
 
