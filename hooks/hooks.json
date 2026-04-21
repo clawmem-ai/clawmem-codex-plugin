@@ -1,0 +1,39 @@
+{
+  "description": "ClawMem lifecycle hooks for Codex: pre-prompt recall injection, post-turn conversation mirroring, and auto-memory sync. Copy or merge this file into ~/.codex/hooks.json and set CLAWMEM_CODEX_PLUGIN_ROOT to the absolute path of this plugin. Requires [features] codex_hooks = true in ~/.codex/config.toml.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAWMEM_AGENT_PREFIX=codex CLAWMEM_STATE_DIR=\"${CLAWMEM_STATE_DIR:-$HOME/.local/state/clawmem}\" node \"${CLAWMEM_CODEX_PLUGIN_ROOT}/hooks/user-prompt-submit.js\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAWMEM_AGENT_PREFIX=codex CLAWMEM_STATE_DIR=\"${CLAWMEM_STATE_DIR:-$HOME/.local/state/clawmem}\" node \"${CLAWMEM_CODEX_PLUGIN_ROOT}/hooks/stop.js\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAWMEM_AGENT_PREFIX=codex CLAWMEM_STATE_DIR=\"${CLAWMEM_STATE_DIR:-$HOME/.local/state/clawmem}\" node \"${CLAWMEM_CODEX_PLUGIN_ROOT}/hooks/post-tool-use.js\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}
