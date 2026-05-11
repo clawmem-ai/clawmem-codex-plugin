@@ -1,12 +1,46 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import http from "node:http";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { startFakeBackend } from "../../clawmem-mcp/test/support/fake-backend.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cliPath = resolve(here, "../bin/clawmem.mjs");
+
+function startFakeBackend(token = "test-token") {
+  const server = http.createServer((req, res) => {
+    let body = "";
+    req.on("data", (chunk) => { body += String(chunk); });
+    req.on("end", () => {
+      if (req.url === "/api/v3/agents" && req.method === "POST") {
+        res.writeHead(201, { "content-type": "application/json" });
+        res.end(JSON.stringify({
+          login: "clawmem-agent",
+          token,
+          repo_full_name: "clawmem-ai/codex-memory",
+        }));
+        return;
+      }
+      if (req.url === "/api/v3/user" && req.method === "GET") {
+        res.writeHead(200, { "content-type": "application/json" });
+        res.end(JSON.stringify({ login: "clawmem-agent", name: "ClawMem Agent" }));
+        return;
+      }
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end("{}");
+    });
+  });
+  return new Promise((resolveBackend) => {
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address();
+      resolveBackend({
+        baseUrl: `http://127.0.0.1:${port}/api/v3`,
+        close: () => new Promise((resolveClose) => server.close(resolveClose)),
+      });
+    });
+  });
+}
 
 function runCli(args, extraEnv = {}) {
   return new Promise((resolveRun) => {
@@ -28,7 +62,7 @@ function runCli(args, extraEnv = {}) {
 }
 
 test("auth codex prints token and repo exports", async () => {
-  const backend = await startFakeBackend([], "test-token");
+  const backend = await startFakeBackend("test-token");
   try {
     const result = await runCli([
       "auth",
@@ -42,6 +76,7 @@ test("auth codex prints token and repo exports", async () => {
     ]);
     assert.equal(result.code, 0);
     assert.match(result.stdout, /export CLAWMEM_TOKEN='test-token'/);
+    assert.match(result.stdout, /export CLAWMEM_DEFAULT_REPO='clawmem-ai\/codex-memory'/);
     assert.match(result.stdout, /export CLAWMEM_REPO='clawmem-ai\/codex-memory'/);
   } finally {
     await backend.close();
@@ -49,13 +84,13 @@ test("auth codex prints token and repo exports", async () => {
 });
 
 test("whoami shows current repo without leaking token", async () => {
-  const backend = await startFakeBackend([], "test-token");
+  const backend = await startFakeBackend("test-token");
   try {
     const result = await runCli(
       ["whoami", "--base-url", backend.baseUrl],
       {
         CLAWMEM_TOKEN: "test-token",
-        CLAWMEM_REPO: "clawmem-ai/demo-memory",
+        CLAWMEM_DEFAULT_REPO: "clawmem-ai/demo-memory",
       },
     );
     assert.equal(result.code, 0);

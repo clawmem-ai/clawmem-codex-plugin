@@ -18,9 +18,20 @@ Hard rule:
 - For ClawMem durable knowledge, use ClawMem `memory_*` tools.
 - Do not write that durable knowledge into Codex local file-based memories, `MEMORY.md`, or other Codex-native memory artifacts.
 
+## Activation And Bootstrap
+
+Codex loading the plugin, showing MCP tools, or restarting the session does not prove that ClawMem has provisioned an agent identity yet. Restart only reloads marketplace and plugin configuration.
+
+When a task first needs ClawMem, or when the user asks whether ClawMem is installed, active, provisioned, or working:
+- Call `clawmem_codex_bootstrap` first. It is the Codex-specific activation and verification tool.
+- Treat a successful bootstrap result as the source of truth for the current agent login, default repo, state path, optional hooks, and pending repo invitations.
+- If `clawmem_codex_bootstrap` is unavailable, call `memory_repos` as the fallback provisioning trigger and tell the user the installed `clawmem-mcp-server` may need to be updated.
+- Do not ask the user to restart repeatedly to activate ClawMem. Restart only helps after marketplace/plugin config changes.
+
 ## V1 Tool Surface
 
 Use these tools for the V1 memory-first loop:
+- `clawmem_codex_bootstrap`
 - `memory_repos`
 - `memory_labels`
 - `memory_recall`

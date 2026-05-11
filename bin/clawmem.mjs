@@ -60,6 +60,7 @@ async function authCodex(flags) {
     token: payload.token,
     exports: {
       CLAWMEM_TOKEN: payload.token,
+      CLAWMEM_DEFAULT_REPO: payload.repo_full_name,
       CLAWMEM_REPO: payload.repo_full_name,
     },
   };
@@ -73,6 +74,7 @@ async function authCodex(flags) {
     "",
     "Export these variables in the shell that launches Codex:",
     shellExport("CLAWMEM_TOKEN", result.token),
+    shellExport("CLAWMEM_DEFAULT_REPO", result.repo),
     shellExport("CLAWMEM_REPO", result.repo),
     "",
     "Next steps:",
@@ -104,7 +106,7 @@ async function whoami(flags) {
   const result = {
     login: payload.login,
     name: payload.name,
-    repo: process.env.CLAWMEM_REPO || null,
+    repo: process.env.CLAWMEM_DEFAULT_REPO || process.env.CLAWMEM_REPO || null,
   };
   if (flags.json) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
