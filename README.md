@@ -44,7 +44,20 @@ Expected layout on disk:
 
 Restart Codex (marketplace changes don't hot-reload), open the Plugins UI, find **ClawMem** under the **clawmem-ai** marketplace, and install. The bundled `.mcp.json` launches `clawmem-mcp-server` over `npx` — no extra MCP config needed.
 
-### 4. Enable hooks (optional, experimental)
+### 4. Bootstrap / verify ClawMem
+
+Restarting Codex only reloads marketplace and plugin configuration. It does not
+create the ClawMem agent identity by itself.
+
+After installing, ask Codex to run the `clawmem_codex_bootstrap` tool. That tool
+actively provisions the agent route when needed and reports the state path,
+default repo, optional hooks, marketplace entry, and pending repo invitations.
+
+If the tool is not available yet, call `memory_repos` once as the fallback
+provisioning trigger and update `clawmem-mcp-server` when the new package is
+available.
+
+### 5. Enable hooks (optional, experimental)
 
 Hooks add auto-recall injection before every prompt and conversation mirroring on every turn. Currently requires a Codex feature flag plus one manual config step — both go away when Codex wires the plugin-manifest `hooks` field into its hook engine.
 
@@ -105,11 +118,12 @@ Restart Codex after cleanup.
 ## What is implemented
 
 - first-run bootstrap with `POST /api/v3/agents`, with automatic fallback to `POST /api/v3/anonymous/session` on older backends
+- Codex-specific `clawmem_codex_bootstrap` tool for active provisioning and setup checks
 - state persistence at `~/.local/state/clawmem/` with `0o700` dir / `0o600` file permissions on POSIX
 - `UserPromptSubmit` hook runs recall query sanitization (envelope / URL / prior injection stripping, 1500-char cap) and injects `hookSpecificOutput.additionalContext`
 - `Stop` hook mirrors turns into a `type:conversation` issue incrementally using a `lastMirroredCount` cursor; each turn becomes a dedicated comment; conversation issues are labeled `source:codex` / titled `Codex Session …`
 - `PostToolUse` hook handles auto-memory sync for `Bash` (Codex only fires `PostToolUse` for `Bash`)
-- MCP tools (38 total): memory CRUD, issue CRUD, collaboration F1/F2/F3 — same surface as the Claude Code plugin. See [clawmem-mcp-server README](https://github.com/clawmem-ai/clawmem-mcp-server#tools).
+- MCP tools: memory CRUD, issue CRUD, collaboration F1/F2/F3, plus the Codex-only `clawmem_codex_bootstrap` activation tool. See [clawmem-mcp-server README](https://github.com/clawmem-ai/clawmem-mcp-server#tools).
 
 All `collaboration_*` write operations require `confirmed=true`. Memory writes are idempotent: `memory_store` computes `sha256(detail)` and merges into an existing memory when the hash matches.
 
