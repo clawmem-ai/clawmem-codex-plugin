@@ -1,141 +1,111 @@
 # ClawMem Codex Plugin
 
-ClawMem for Codex is a repo-backed durable memory plugin that provisions a per-agent route, recalls relevant memory before prompts (via optional hooks), mirrors turns into conversation issues, and exposes manual memory tools over MCP. **No API key or signup required** — first tool call auto-provisions your agent identity and a default repo.
+ClawMem for Codex is a repo-backed durable memory plugin. It bundles:
 
-> **Using Claude Code instead?** Install [clawmem-claude-code-plugin](https://github.com/clawmem-ai/clawmem-claude-code-plugin) via the Claude Code plugin marketplace — same ClawMem backend, hooks wired in automatically.
+- a Codex skill that teaches Codex when to recall, save, update, and retire durable memory
+- a bundled MCP config that launches `clawmem-mcp-server` with `npx`
+- optional Codex lifecycle hooks for auto-recall and conversation mirroring
 
-## Install And Use
+No API key or signup is required. The first real ClawMem tool call provisions the Codex agent identity and default repo.
 
-### 1. Clone the plugin
+## Install
+
+Add the ClawMem marketplace from this GitHub repo:
 
 ```sh
-git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/clawmem-codex-plugin
+codex plugin marketplace add clawmem-ai/clawmem-codex-plugin --ref main
 ```
 
-The plugin must be a **sibling** of `~/.agents/`, not inside it. Codex resolves `source.path` in `marketplace.json` relative to the marketplace root (the directory *containing* `.agents/`, i.e. two levels above `marketplace.json`) — not the directory where `marketplace.json` itself lives. So `"./clawmem-codex-plugin"` resolves to `~/clawmem-codex-plugin`; putting the plugin under `~/.agents/plugins/` makes the Codex Plugins UI fail with `plugin/read failed`.
+Install the plugin:
 
-### 2. Register the marketplace
-
-Create or edit `~/.agents/plugins/marketplace.json`:
-
-```jsonc
-{
-  "name": "clawmem-ai",
-  "interface": { "displayName": "ClawMem" },
-  "plugins": [
-    {
-      "name": "clawmem",
-      "source": { "source": "local", "path": "./clawmem-codex-plugin" },
-      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
-      "category": "Productivity"
-    }
-  ]
-}
+```sh
+codex plugin add clawmem@clawmem-ai
 ```
 
-Expected layout on disk:
+Start a new Codex thread after installation. Codex loads new plugin skills and MCP tools at the thread boundary.
 
+## Verify
+
+Ask Codex:
+
+```text
+Run clawmem_codex_bootstrap and verify ClawMem is ready.
 ```
-~/.agents/plugins/marketplace.json     ← marketplace manifest
-~/clawmem-codex-plugin/                ← plugin (sibling of .agents)
+
+`clawmem_codex_bootstrap` actively provisions the agent route when needed and reports the state path, default repo, optional hooks, marketplace entry, and pending repo invitations.
+
+If that tool is not available, ask Codex to call `memory_repos` once as the fallback provisioning trigger, then update the marketplace and reinstall:
+
+```sh
+codex plugin marketplace upgrade clawmem-ai
+codex plugin add clawmem@clawmem-ai
 ```
 
-### 3. Install from the Codex Plugins UI
+## Update
 
-Restart Codex (marketplace changes don't hot-reload), open the Plugins UI, find **ClawMem** under the **clawmem-ai** marketplace, and install. The bundled `.mcp.json` launches `clawmem-mcp-server` over `npx` — no extra MCP config needed.
+Refresh the marketplace snapshot and reinstall the plugin:
 
-### 4. Bootstrap / verify ClawMem
+```sh
+codex plugin marketplace upgrade clawmem-ai
+codex plugin add clawmem@clawmem-ai
+```
 
-Restarting Codex only reloads marketplace and plugin configuration. It does not
-create the ClawMem agent identity by itself.
+Open a new Codex thread after reinstalling.
 
-After installing, ask Codex to run the `clawmem_codex_bootstrap` tool. That tool
-actively provisions the agent route when needed and reports the state path,
-default repo, optional hooks, marketplace entry, and pending repo invitations.
+## Optional Hooks
 
-If the tool is not available yet, call `memory_repos` once as the fallback
-provisioning trigger and update `clawmem-mcp-server` when the new package is
-available.
+The plugin includes optional Codex hooks under `plugins/clawmem/hooks/`. Hooks add auto-recall injection before prompts, conversation mirroring after turns, and auto-memory sync for `Bash` tool use.
 
-### 5. Enable hooks (optional, experimental)
+Hooks are currently manual because Codex does not wire plugin manifest hooks into the hook engine yet.
 
-Hooks add auto-recall injection before every prompt and conversation mirroring on every turn. Currently requires a Codex feature flag plus one manual config step — both go away when Codex wires the plugin-manifest `hooks` field into its hook engine.
-
-Add to `~/.codex/config.toml`:
+Enable the Codex hook feature:
 
 ```toml
 [features]
 codex_hooks = true
 ```
 
-Copy the bundled `hooks.json` into Codex's hooks directory and export the plugin root:
+Clone this repo and point Codex hooks at the plugin package:
 
 ```sh
-export CLAWMEM_CODEX_PLUGIN_ROOT=~/clawmem-codex-plugin
+git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/clawmem-codex-plugin
+export CLAWMEM_CODEX_PLUGIN_ROOT=~/clawmem-codex-plugin/plugins/clawmem
 cp "$CLAWMEM_CODEX_PLUGIN_ROOT/hooks/hooks.json" ~/.codex/hooks.json
 ```
 
-Put the `CLAWMEM_CODEX_PLUGIN_ROOT` export in your shell init (`.zshrc` / `.bashrc`) so it persists. If you already have `~/.codex/hooks.json`, merge the `hooks.*` arrays manually instead of overwriting.
+Put the `CLAWMEM_CODEX_PLUGIN_ROOT` export in your shell init file. If you already have `~/.codex/hooks.json`, merge the `hooks.*` arrays manually instead of overwriting the file.
 
-Check `~/.local/state/clawmem/debug/events.jsonl` for `recall_complete` / `mirror_complete` entries to confirm hooks are firing.
+## What Is Implemented
 
-## Uninstall
-
-Remove the plugin directory and marketplace entry:
-
-```sh
-rm -rf ~/clawmem-codex-plugin
-# If ClawMem was the only plugin in the marketplace, remove the whole file:
-rm ~/.agents/plugins/marketplace.json
-# Otherwise edit the file and drop the `clawmem` entry.
-```
-
-Strip the plugin's installed-state block from `~/.codex/config.toml`:
-
-```toml
-# Delete this block (if present):
-[plugins."clawmem@clawmem-ai"]
-enabled = true
-```
-
-If you enabled hooks, remove them too:
-
-```sh
-rm ~/.codex/hooks.json
-# And drop [features] codex_hooks = true from ~/.codex/config.toml if nothing else uses it.
-```
-
-Clear the ClawMem state (deletes your agent identity and route; next install will bootstrap a fresh one):
-
-```sh
-rm -rf ~/.local/state/clawmem
-```
-
-If you used the minimal install (MCP-only), remove the `[mcp_servers.clawmem]` stanza from `~/.codex/config.toml`.
-
-Restart Codex after cleanup.
-
-## What is implemented
-
-- first-run bootstrap with `POST /api/v3/agents`, with automatic fallback to `POST /api/v3/anonymous/session` on older backends
+- first-run bootstrap with `POST /api/v3/agents`, with fallback to `POST /api/v3/anonymous/session` for older backends
 - Codex-specific `clawmem_codex_bootstrap` tool for active provisioning and setup checks
-- state persistence at `~/.local/state/clawmem/` with `0o700` dir / `0o600` file permissions on POSIX
-- `UserPromptSubmit` hook runs recall query sanitization (envelope / URL / prior injection stripping, 1500-char cap) and injects `hookSpecificOutput.additionalContext`
-- `Stop` hook mirrors turns into a `type:conversation` issue incrementally using a `lastMirroredCount` cursor; each turn becomes a dedicated comment; conversation issues are labeled `source:codex` / titled `Codex Session …`
-- `PostToolUse` hook handles auto-memory sync for `Bash` (Codex only fires `PostToolUse` for `Bash`)
-- MCP tools: memory CRUD, issue CRUD, collaboration F1/F2/F3, plus the Codex-only `clawmem_codex_bootstrap` activation tool. See [clawmem-mcp-server README](https://github.com/clawmem-ai/clawmem-mcp-server#tools).
+- state persistence at `~/.local/state/clawmem/`
+- MCP tools for memory CRUD, issue CRUD, and collaboration workflows
+- optional `UserPromptSubmit`, `Stop`, and `PostToolUse` hooks
 
 All `collaboration_*` write operations require `confirmed=true`. Memory writes are idempotent: `memory_store` computes `sha256(detail)` and merges into an existing memory when the hash matches.
 
-### Capability caveats vs Claude Code
+## Local Development
 
-- **No `SessionEnd` event in Codex** — conversation issues stay `status:active` and don't auto-close. Close them via the ClawMem console (`memory_console`) when you want to archive.
-- **`PostToolUse` only fires for `Bash` in Codex** (Claude Code also fires for Write/Edit/MultiEdit). Use `memory_store` explicitly for durable facts until Codex widens the matcher.
-- **Plugin-manifest `hooks` field not wired yet** — `.codex-plugin/plugin.json` accepts a `hooks` field in the spec, but the Codex manifest parser currently ignores it. That's why the manual `cp hooks.json` step is still required.
+This repo is also a Codex marketplace. The marketplace manifest lives at `.agents/plugins/marketplace.json`, and the plugin package lives at `plugins/clawmem/`.
 
-## Minimal install (MCP server only)
+For local testing:
 
-Skip the plugin if you only want the MCP tools and are fine prompting the model explicitly each time. Add to `~/.codex/config.toml`:
+```sh
+codex plugin marketplace add /path/to/clawmem-codex-plugin
+codex plugin add clawmem@clawmem-ai
+npm test
+```
+
+Validate the plugin manifest with the Codex plugin validator:
+
+```sh
+python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/clawmem
+```
+
+## Minimal MCP-Only Install
+
+Skip the plugin only if you want raw MCP tools and are fine prompting Codex explicitly each time:
 
 ```toml
 [mcp_servers.clawmem]
@@ -144,22 +114,9 @@ args = ["-y", "clawmem-mcp-server"]
 env = { CLAWMEM_AGENT_PREFIX = "codex", CLAWMEM_STATE_DIR = "~/.local/state/clawmem" }
 ```
 
-Without the bundled skill, Codex has the tools but no discipline about when to call them. **Not recommended** — exists for MCP-only smoke tests and environments where the plugin install path isn't possible.
+Without the bundled skill, Codex has the tools but no durable-memory protocol. This is not recommended for normal use.
 
-## Environment variables
+## Related Repos
 
-The plugin's `.mcp.json` presets:
-
-| Env var | Value | Why |
-| --- | --- | --- |
-| `CLAWMEM_STATE_DIR` | `~/.local/state/clawmem` | Persist token + route outside the npx cache. Hooks read the same path. |
-| `CLAWMEM_AGENT_PREFIX` | `codex` | Tags the auto-provisioned agent login as a Codex user, and drives the `source:codex` conversation label. |
-
-For hooks, also export `CLAWMEM_CODEX_PLUGIN_ROOT=~/clawmem-codex-plugin` in your shell init so `hooks.json` can resolve `node "$CLAWMEM_CODEX_PLUGIN_ROOT/hooks/*.js"`.
-
-Other overrides: `CLAWMEM_BASE_URL`, `CLAWMEM_TOKEN`, `CLAWMEM_MEMORY_RECALL_LIMIT`, `CLAWMEM_MEMORY_AUTO_RECALL_LIMIT`. See [clawmem-mcp-server configuration](https://github.com/clawmem-ai/clawmem-mcp-server#configuration-env-vars) for the full list.
-
-## Related repos
-
-- [clawmem-mcp-server](https://github.com/clawmem-ai/clawmem-mcp-server) — shared stdio MCP server (npm: `clawmem-mcp-server`)
-- [clawmem-claude-code-plugin](https://github.com/clawmem-ai/clawmem-claude-code-plugin) — Claude Code flavor with hooks wired in automatically
+- [clawmem-mcp-server](https://github.com/clawmem-ai/clawmem-mcp-server) - shared stdio MCP server
+- [clawmem-claude-code-plugin](https://github.com/clawmem-ai/clawmem-claude-code-plugin) - Claude Code plugin

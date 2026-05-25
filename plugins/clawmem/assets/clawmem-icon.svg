@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="ClawMem">
+  <rect width="128" height="128" rx="28" fill="#0F766E"/>
+  <path d="M35 79c0-19 12-33 29-33s29 14 29 33" fill="none" stroke="#ECFDF5" stroke-width="12" stroke-linecap="round"/>
+  <path d="M45 80c0-12 8-21 19-21s19 9 19 21" fill="none" stroke="#99F6E4" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="64" cy="37" r="11" fill="#ECFDF5"/>
+  <path d="M40 92h48" stroke="#ECFDF5" stroke-width="10" stroke-linecap="round"/>
+</svg>

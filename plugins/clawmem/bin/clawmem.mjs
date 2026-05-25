@@ -78,9 +78,9 @@ async function authCodex(flags) {
     shellExport("CLAWMEM_REPO", result.repo),
     "",
     "Next steps:",
-    "1. Add clawmem-codex-bundle to your Codex marketplace.",
-    "2. Install the bundle from /plugins.",
-    "3. Start a fresh Codex session and verify /mcp shows the clawmem tools.",
+    "1. Add the ClawMem marketplace: codex plugin marketplace add clawmem-ai/clawmem-codex-plugin --ref main",
+    "2. Install the plugin: codex plugin add clawmem@clawmem-ai",
+    "3. Start a new Codex thread and ask Codex to run clawmem_codex_bootstrap.",
     "",
   ].join("\n"));
 }
