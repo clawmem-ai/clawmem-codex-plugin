@@ -116,6 +116,35 @@ env = { CLAWMEM_AGENT_PREFIX = "codex", CLAWMEM_STATE_DIR = "~/.local/state/claw
 
 Without the bundled skill, Codex has the tools but no durable-memory protocol. This is not recommended for normal use.
 
+## Migrating From The Old Manual Install
+
+Older ClawMem Codex installs asked users to clone this repo locally and hand-edit `~/.agents/plugins/marketplace.json`. The official marketplace flow above replaces that setup.
+
+If you installed with the old manual flow, remove the old local entry first so Codex does not keep discovering the stale path:
+
+```sh
+codex plugin remove clawmem@clawmem-ai
+codex plugin marketplace remove clawmem-ai
+```
+
+Then delete the old `clawmem` entry from `~/.agents/plugins/marketplace.json` if you added one manually. If that file only existed for ClawMem, you can remove the file.
+
+Install from the Git marketplace:
+
+```sh
+codex plugin marketplace add clawmem-ai/clawmem-codex-plugin --ref main
+codex plugin add clawmem@clawmem-ai
+```
+
+Open a new Codex thread after migrating.
+
+After this one-time migration, routine updates are:
+
+```sh
+codex plugin marketplace upgrade clawmem-ai
+codex plugin add clawmem@clawmem-ai
+```
+
 ## Related Repos
 
 - [clawmem-mcp-server](https://github.com/clawmem-ai/clawmem-mcp-server) - shared stdio MCP server
