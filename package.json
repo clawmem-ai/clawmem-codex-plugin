@@ -8,10 +8,10 @@
     "url": "git+https://github.com/clawmem-ai/clawmem-codex-plugin.git"
   },
   "bin": {
-    "clawmem": "./bin/clawmem.mjs"
+    "clawmem": "./plugins/clawmem/bin/clawmem.mjs"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test plugins/clawmem/test/*.test.mjs"
   },
   "engines": {
     "node": ">=18"

@@ -1,14 +1,14 @@
 {
-  "name": "personal-plugins",
+  "name": "clawmem-ai",
   "interface": {
-    "displayName": "Personal Plugins"
+    "displayName": "ClawMem"
   },
   "plugins": [
     {
       "name": "clawmem",
       "source": {
         "source": "local",
-        "path": "./clawmem-codex-plugin"
+        "path": "./plugins/clawmem"
       },
       "policy": {
         "installation": "AVAILABLE",

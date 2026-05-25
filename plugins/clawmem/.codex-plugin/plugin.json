@@ -2,6 +2,20 @@
   "name": "clawmem",
   "version": "0.1.0",
   "description": "ClawMem durable memory bundle for Codex. Installs the Codex-specific ClawMem memory protocol skill and connects Codex to the hosted ClawMem MCP service.",
+  "author": {
+    "name": "ClawMem",
+    "url": "https://clawmem.ai"
+  },
+  "homepage": "https://clawmem.ai",
+  "repository": "https://github.com/clawmem-ai/clawmem-codex-plugin",
+  "license": "MIT",
+  "keywords": [
+    "clawmem",
+    "memory",
+    "codex",
+    "mcp",
+    "repo-memory"
+  ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
@@ -20,6 +34,8 @@
       "Remember that this repo now uses pnpm and biome",
       "What ClawMem memories do I already have about this project?"
     ],
-    "brandColor": "#0F766E"
+    "brandColor": "#0F766E",
+    "composerIcon": "assets/clawmem-icon.svg",
+    "logo": "assets/clawmem-icon.svg"
   }
 }
