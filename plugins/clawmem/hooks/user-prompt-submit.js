@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 const { appendEvent, mutateState } = require("../lib/state");
-const { resolveMemoryAutoRecallLimit } = require("../lib/config");
+const {
+  resolveMemoryAutoRecallLimit,
+  resolveMemoryAutoRecallPlannerVariantLimit,
+  resolveMemoryAutoRecallStrategy
+} = require("../lib/config");
 const github = require("../lib/github");
-const { ensureRoute, formatRecallContext, recall } = require("../lib/runtime");
+const { ensureRoute, formatRecallContext, recallWithContext } = require("../lib/runtime");
 
 async function readJsonStdin() {
   const chunks = [];
@@ -29,19 +33,32 @@ async function main() {
     return state;
   });
 
-  let recalled = [];
+  let recallBundle = { memories: [], wikiContexts: [] };
   try {
-    if (prompt) recalled = await recall(route, repo, prompt, resolveMemoryAutoRecallLimit());
+    if (prompt) {
+      recallBundle = await recallWithContext(route, repo, prompt, resolveMemoryAutoRecallLimit(), {
+        plannerVariantLimit: resolveMemoryAutoRecallPlannerVariantLimit(),
+        recallStrategy: resolveMemoryAutoRecallStrategy()
+      });
+    }
+    const recalled = recallBundle.memories || [];
+    const wikiContexts = recallBundle.wikiContexts || [];
     await github.createEvent(route, {
       repo,
-      type: recalled.length > 0 ? "recall_success" : "recall_miss",
+      type: recalled.length > 0 || wikiContexts.length > 0 ? "recall_success" : "recall_miss",
       severity: "info",
       step: "user_prompt_submit",
       session_id: sessionId,
-      message: recalled.length > 0 ? `Recalled ${recalled.length} memories before prompt execution.` : "No relevant memories recalled before prompt execution.",
+      message: recalled.length > 0 || wikiContexts.length > 0
+        ? `Recalled ${recalled.length} memories and ${wikiContexts.length} wiki context maps before prompt execution.`
+        : "No relevant memories or wiki context maps recalled before prompt execution.",
       details: {
         prompt,
-        memory_ids: recalled.map((item) => item.memoryId)
+        memory_ids: recalled.map((item) => item.memoryId),
+        wiki_slugs: wikiContexts.map((item) => item.slug).filter(Boolean),
+        wiki_anchor_memory_ids: recalled
+          .filter((item) => item.wikiAnchors && item.wikiAnchors.length > 0)
+          .map((item) => item.memoryId)
       }
     });
   } catch (error) {
@@ -60,11 +77,12 @@ async function main() {
     type: "recall_complete",
     sessionId,
     repo,
-    count: recalled.length
+    count: recallBundle.memories.length,
+    wikiContextCount: recallBundle.wikiContexts.length
   });
 
-  if (recalled.length === 0) return;
-  const additionalContext = formatRecallContext(recalled, repo);
+  if (recallBundle.memories.length === 0 && recallBundle.wikiContexts.length === 0) return;
+  const additionalContext = formatRecallContext(recallBundle, repo);
   if (!additionalContext) return;
   process.stdout.write(
     JSON.stringify({

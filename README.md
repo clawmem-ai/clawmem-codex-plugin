@@ -3,12 +3,14 @@
 ClawMem for Codex is a repo-backed durable memory plugin. It bundles:
 
 - a Codex skill that teaches Codex when to recall, save, update, and retire durable memory
-- a bundled MCP config that launches `clawmem-mcp-server` with `npx`
-- optional Codex lifecycle hooks for auto-recall and conversation mirroring
+- an internal MCP config that launches `clawmem-mcp-server` for the plugin
+- optional Codex lifecycle hooks for memory-first, wiki-aware auto-recall and conversation mirroring
 
 No API key or signup is required. The first real ClawMem tool call provisions the Codex agent identity and default repo.
 
 ## Install
+
+User-facing installation is the Codex plugin. Do not install ClawMem as a raw MCP server unless you are debugging the MCP transport directly.
 
 Add the ClawMem marketplace from this GitHub repo:
 
@@ -54,18 +56,18 @@ Open a new Codex thread after reinstalling.
 
 ## Optional Hooks
 
-The plugin includes optional Codex hooks under `plugins/clawmem/hooks/`. Hooks add auto-recall injection before prompts, conversation mirroring after turns, and auto-memory sync for `Bash` tool use.
+The plugin includes optional Codex hooks under `plugins/clawmem/hooks/`. Hooks add memory-first, wiki-aware recall injection before prompts, conversation mirroring after turns, and auto-memory sync for `Bash` tool use.
 
-Hooks are currently manual because Codex does not wire plugin manifest hooks into the hook engine yet.
+The plugin manifest points at `./hooks/hooks.json`. If your Codex build loads plugin-bundled hooks, review and trust the bundled hooks when Codex prompts for hook trust.
 
-Enable the Codex hook feature:
+For older or manual installs, hooks can still be copied into `~/.codex/hooks.json`. If hooks are disabled globally, enable the canonical feature key:
 
 ```toml
 [features]
-codex_hooks = true
+hooks = true
 ```
 
-Clone this repo and point Codex hooks at the plugin package:
+Manual hook fallback:
 
 ```sh
 git clone https://github.com/clawmem-ai/clawmem-codex-plugin ~/clawmem-codex-plugin
@@ -82,8 +84,22 @@ Put the `CLAWMEM_CODEX_PLUGIN_ROOT` export in your shell init file. If you alrea
 - state persistence at `~/.local/state/clawmem/`
 - MCP tools for memory CRUD, issue CRUD, and collaboration workflows
 - optional `UserPromptSubmit`, `Stop`, and `PostToolUse` hooks
+- `UserPromptSubmit` searches open `type:memory` issues first, adds wiki context maps as background/boosters when available, and injects `hookSpecificOutput.additionalContext`
+- hook auto-recall defaults to OpenClaw-style query planning: full, compact, core, surface, literal, and entity search variants run in parallel, with wiki issue refs used only as ranking hints
 
 All `collaboration_*` write operations require `confirmed=true`. Memory writes are idempotent: `memory_store` computes `sha256(detail)` and merges into an existing memory when the hash matches.
+
+Optional hook tuning:
+
+- `CLAWMEM_MEMORY_AUTO_RECALL_STRATEGY=single|literal-repair|query-planner`
+- `CLAWMEM_MEMORY_AUTO_RECALL_PLANNER_VARIANT_LIMIT=1..6`
+- `CLAWMEM_MEMORY_AUTO_RECALL_LIMIT=1..20`
+
+## Caveats
+
+- `PostToolUse` only fires for `Bash` in Codex in current tested setups. Use `memory_store` explicitly for durable facts until Codex widens the matcher.
+- Plugin-bundled hooks may require trust review, and older Codex builds may still need the manual `~/.codex/hooks.json` fallback.
+- Wiki context maps are background and ranking hints. Open `type:memory` issues remain the durable memory ground truth.
 
 ## Local Development
 
@@ -103,9 +119,9 @@ Validate the plugin manifest with the Codex plugin validator:
 python3 /path/to/plugin-creator/scripts/validate_plugin.py plugins/clawmem
 ```
 
-## Minimal MCP-Only Install
+## MCP Debug Fallback
 
-Skip the plugin only if you want raw MCP tools and are fine prompting Codex explicitly each time:
+The plugin owns the normal install path and includes its MCP config. Use this raw MCP-only config only for debugging the MCP server outside the plugin, or for a temporary fallback when the plugin cannot be installed:
 
 ```toml
 [mcp_servers.clawmem]
@@ -114,7 +130,7 @@ args = ["-y", "clawmem-mcp-server"]
 env = { CLAWMEM_AGENT_PREFIX = "codex", CLAWMEM_STATE_DIR = "~/.local/state/clawmem" }
 ```
 
-Without the bundled skill, Codex has the tools but no durable-memory protocol. This is not recommended for normal use.
+Without the plugin, Codex has raw tools but no bundled skill, hook recall, marketplace metadata, or durable-memory protocol. This is not recommended for normal use.
 
 ## Migrating From The Old Manual Install
 
