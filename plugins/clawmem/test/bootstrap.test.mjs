@@ -14,11 +14,18 @@ function startFakeBackend(token = "test-token") {
     req.on("data", (chunk) => { body += String(chunk); });
     req.on("end", () => {
       if (req.url === "/api/v3/agents" && req.method === "POST") {
+        let repoName = "codex-memory";
+        try {
+          const payload = JSON.parse(body || "{}");
+          repoName = String(payload.default_repo_name || repoName);
+        } catch {
+          // Keep the default repo name for invalid JSON in tests.
+        }
         res.writeHead(201, { "content-type": "application/json" });
         res.end(JSON.stringify({
           login: "clawmem-agent",
           token,
-          repo_full_name: "clawmem-ai/codex-memory",
+          repo_full_name: `clawmem-ai/${repoName}`,
         }));
         return;
       }

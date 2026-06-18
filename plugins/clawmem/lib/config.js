@@ -103,6 +103,23 @@ function resolveMemoryAutoRecallLimit() {
   );
 }
 
+function resolveMemoryAutoRecallStrategy() {
+  const raw = String(
+    process.env.CLAWMEM_MEMORY_AUTO_RECALL_STRATEGY ||
+      process.env.CLAUDE_PLUGIN_OPTION_memoryAutoRecallStrategy ||
+      "query-planner"
+  ).trim();
+  return ["single", "literal-repair", "query-planner"].includes(raw) ? raw : "query-planner";
+}
+
+function resolveMemoryAutoRecallPlannerVariantLimit() {
+  return firstDefinedInt(
+    ["CLAWMEM_MEMORY_AUTO_RECALL_PLANNER_VARIANT_LIMIT", "CLAUDE_PLUGIN_OPTION_memoryAutoRecallPlannerVariantLimit"],
+    6,
+    { min: 1, max: 6 }
+  );
+}
+
 function eventLogPath() {
   return path.join(pluginDataDir(), "debug", "events.jsonl");
 }
@@ -117,6 +134,8 @@ module.exports = {
   resolveBaseUrl,
   resolveConsoleBaseUrl,
   resolveDefaultRepoName,
+  resolveMemoryAutoRecallPlannerVariantLimit,
   resolveMemoryAutoRecallLimit,
+  resolveMemoryAutoRecallStrategy,
   resolveMemoryRecallLimit
 };

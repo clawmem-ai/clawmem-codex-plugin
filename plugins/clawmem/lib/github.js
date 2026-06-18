@@ -183,9 +183,27 @@ async function listIssues(route, repo, params = {}) {
 async function searchIssues(route, query, params = {}) {
   const search = new URLSearchParams();
   search.set("q", query);
+  if (params.page) search.set("page", String(params.page));
   search.set("per_page", String(params.perPage || 20));
+  if (params.debug) search.set("debug", "true");
+  if (params.textMatches) search.set("text_matches", "true");
   const result = await request(route, `search/issues?${search}`, { method: "GET" });
   return Array.isArray(result && result.items) ? result.items : [];
+}
+
+async function searchWikiPages(route, repo, query, params = {}) {
+  const search = new URLSearchParams();
+  search.set("q", query);
+  search.set("limit", String(params.limit || 3));
+  search.set("offset", String(params.offset || 0));
+  for (const label of params.labels || []) search.append("labels", label);
+  for (const label of params.excludeLabels || []) search.append("exclude_labels", label);
+  const result = await request(route, `${repoPath(repo, "wiki/search")}?${search}`, { method: "GET" });
+  return Array.isArray(result && result.results) ? result.results : [];
+}
+
+async function getWikiPage(route, repo, slug) {
+  return request(route, repoPath(repo, `wiki/pages/${encodeURIComponent(slug)}`), { method: "GET" });
 }
 
 async function listUserRepos(route) {
@@ -385,6 +403,8 @@ function issueState(issue) {
 
 function issueDetail(issue) {
   const body = String((issue && issue.body) || "");
+  const memorySectionMatch = body.match(/^## Memory\s*\n+([\s\S]*?)(?=\n## |\s*$)/m);
+  if (memorySectionMatch) return memorySectionMatch[1].trim();
   const blockMatch = body.match(/detail:\s*\|-\n([\s\S]*)$/m);
   if (blockMatch) {
     return blockMatch[1]
@@ -809,6 +829,7 @@ module.exports = {
   getOrgMembership,
   getRepo,
   getTeam,
+  getWikiPage,
   isManagedLabel,
   issueDetail,
   issueLabels,
@@ -840,6 +861,7 @@ module.exports = {
   registerAgent,
   request,
   searchIssues,
+  searchWikiPages,
   setRepoCollaborator,
   setTeamMembership,
   setTeamRepoAccess,
