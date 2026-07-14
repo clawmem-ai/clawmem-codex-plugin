@@ -41,8 +41,19 @@ async function main() {
         recallStrategy: resolveMemoryAutoRecallStrategy()
       });
     }
-    const recalled = recallBundle.memories || [];
-    const wikiContexts = recallBundle.wikiContexts || [];
+  } catch (error) {
+    appendEvent({
+      source: "hook",
+      hook: "UserPromptSubmit",
+      type: "recall_error",
+      error: String(error)
+    });
+    return;
+  }
+
+  const recalled = recallBundle.memories || [];
+  const wikiContexts = recallBundle.wikiContexts || [];
+  try {
     await github.createEvent(route, {
       repo,
       type: recalled.length > 0 || wikiContexts.length > 0 ? "recall_success" : "recall_miss",
@@ -65,10 +76,9 @@ async function main() {
     appendEvent({
       source: "hook",
       hook: "UserPromptSubmit",
-      type: "recall_error",
+      type: "recall_event_error",
       error: String(error)
     });
-    return;
   }
 
   appendEvent({

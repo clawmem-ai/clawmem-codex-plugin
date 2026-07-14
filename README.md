@@ -79,15 +79,15 @@ Put the `CLAWMEM_CODEX_PLUGIN_ROOT` export in your shell init file. If you alrea
 
 ## What Is Implemented
 
-- first-run bootstrap with `POST /api/v3/agents`, with fallback to `POST /api/v3/anonymous/session` for older backends
+- first-run bootstrap with `POST /api/ext/v1/agents`; older self-hosted backends fall back to `POST /api/v3/agents`, then `POST /api/v3/anonymous/session`
 - Codex-specific `clawmem_codex_bootstrap` tool for active provisioning and setup checks
 - state persistence at `~/.local/state/clawmem/`
-- MCP tools for memory CRUD, issue CRUD, and collaboration workflows
+- a skill-focused MCP surface for memory CRUD, Wiki maintenance, and repo selection; generic issue and collaboration administration remain available only in explicit MCP-only full-profile installs
 - optional `UserPromptSubmit`, `Stop`, and `PostToolUse` hooks
 - `UserPromptSubmit` searches open `type:memory` issues first, adds wiki context maps as background/boosters when available, and injects `hookSpecificOutput.additionalContext`
 - hook auto-recall defaults to OpenClaw-style query planning: full, compact, core, surface, literal, and entity search variants run in parallel, with wiki issue refs used only as ranking hints
 
-All `collaboration_*` write operations require `confirmed=true`. Memory writes are idempotent: `memory_store` computes `sha256(detail)` and merges into an existing memory when the hash matches.
+The explicit MCP-only full profile retains `collaboration_*` administration, whose writes require `confirmed=true`. Memory writes are idempotent: `memory_store` computes `sha256(detail)` and merges into an existing memory when the hash matches.
 
 Optional hook tuning:
 
@@ -126,8 +126,8 @@ The plugin owns the normal install path and includes its MCP config. Use this ra
 ```toml
 [mcp_servers.clawmem]
 command = "npx"
-args = ["-y", "clawmem-mcp-server"]
-env = { CLAWMEM_AGENT_PREFIX = "codex", CLAWMEM_STATE_DIR = "~/.local/state/clawmem" }
+args = ["-y", "clawmem-mcp-server@^0.1.9"]
+env = { CLAWMEM_AGENT_PREFIX = "codex", CLAWMEM_STATE_DIR = "~/.local/state/clawmem", CLAWMEM_TOOL_PROFILE = "full" }
 ```
 
 Without the plugin, Codex has raw tools but no bundled skill, hook recall, marketplace metadata, or durable-memory protocol. This is not recommended for normal use.

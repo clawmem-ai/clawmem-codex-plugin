@@ -34,6 +34,31 @@ function isAgentsEndpointUnavailable(error) {
   return /HTTP (404|405|501):/i.test(msg);
 }
 
+function githubApiBaseUrl(baseUrl) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  if (base.endsWith("/api/v3")) return base;
+  if (base.endsWith("/api/ext/v1")) return base.replace(/\/api\/ext\/v1$/, "/api/v3");
+  return `${base}/api/v3`;
+}
+
+function extensionApiBaseUrl(baseUrl) {
+  const base = String(baseUrl || "").replace(/\/+$/, "");
+  if (base.endsWith("/api/ext/v1")) return base;
+  if (base.endsWith("/api/v3")) return base.replace(/\/api\/v3$/, "/api/ext/v1");
+  return `${base}/api/ext/v1`;
+}
+
+function agentRoute(baseUrl, response, bootstrapMethod) {
+  return {
+    baseUrl: githubApiBaseUrl(baseUrl),
+    authScheme: "token",
+    login: response.login || response.owner_login,
+    token: response.token,
+    defaultRepo: response.repo_full_name || (response.owner_login && response.repo_name ? `${response.owner_login}/${response.repo_name}` : ""),
+    bootstrapMethod
+  };
+}
+
 async function createAnonymousSession({ baseUrl, locale }) {
   const body = locale ? JSON.stringify({ locale }) : undefined;
   return request(
@@ -43,7 +68,7 @@ async function createAnonymousSession({ baseUrl, locale }) {
       method: "POST",
       ...(body ? { body } : {})
     },
-    { baseUrl, omitAuth: true }
+    { baseUrl: githubApiBaseUrl(baseUrl), omitAuth: true }
   );
 }
 
@@ -59,35 +84,57 @@ async function registerAgent({ baseUrl, prefixLogin, defaultRepoName }) {
           default_repo_name: defaultRepoName
         })
       },
-      { baseUrl, omitAuth: true }
+      { baseUrl: extensionApiBaseUrl(baseUrl), omitAuth: true }
     );
-    return {
-      baseUrl,
-      authScheme: "token",
-      login: res.login,
-      token: res.token,
-      defaultRepo: res.repo_full_name,
-      bootstrapMethod: "/api/v3/agents"
-    };
+    return agentRoute(baseUrl, res, "/api/ext/v1/agents");
   } catch (error) {
     if (!isAgentsEndpointUnavailable(error)) throw error;
-    const locale = (typeof Intl !== "undefined" && Intl.DateTimeFormat)
-      ? Intl.DateTimeFormat().resolvedOptions().locale || ""
-      : "";
-    const res = await createAnonymousSession({ baseUrl, locale });
-    return {
-      baseUrl,
-      authScheme: "token",
-      login: res.login || res.owner_login,
-      token: res.token,
-      defaultRepo: res.repo_full_name || (res.owner_login && res.repo_name ? `${res.owner_login}/${res.repo_name}` : ""),
-      bootstrapMethod: "/api/v3/anonymous/session"
-    };
+    try {
+      const res = await request(
+        null,
+        "agents",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            prefix_login: prefixLogin,
+            default_repo_name: defaultRepoName
+          })
+        },
+        { baseUrl: githubApiBaseUrl(baseUrl), omitAuth: true }
+      );
+      return agentRoute(baseUrl, res, "/api/v3/agents");
+    } catch (legacyError) {
+      if (!isAgentsEndpointUnavailable(legacyError)) throw legacyError;
+      const locale = (typeof Intl !== "undefined" && Intl.DateTimeFormat)
+        ? Intl.DateTimeFormat().resolvedOptions().locale || ""
+        : "";
+      const res = await createAnonymousSession({ baseUrl, locale });
+      return agentRoute(baseUrl, res, "/api/v3/anonymous/session");
+    }
   }
 }
 
 function repoPath(repo, suffix) {
   return `repos/${repo}/${suffix}`;
+}
+
+function wikiExtRoute(route) {
+  if (!route || !route.baseUrl) return route;
+  return { ...route, baseUrl: extensionApiBaseUrl(route.baseUrl) };
+}
+
+function isNotFoundError(error) {
+  return /HTTP 404:/.test(String(error && error.message || error));
+}
+
+async function wikiRequest(route, repo, suffix, init = {}) {
+  const extRoute = wikiExtRoute(route);
+  try {
+    return await request(extRoute, repoPath(repo, suffix), init);
+  } catch (error) {
+    if (!isNotFoundError(error)) throw error;
+    return request(route, repoPath(repo, suffix), init);
+  }
 }
 
 async function ensureLabels(route, repo, labels) {
@@ -198,12 +245,12 @@ async function searchWikiPages(route, repo, query, params = {}) {
   search.set("offset", String(params.offset || 0));
   for (const label of params.labels || []) search.append("labels", label);
   for (const label of params.excludeLabels || []) search.append("exclude_labels", label);
-  const result = await request(route, `${repoPath(repo, "wiki/search")}?${search}`, { method: "GET" });
+  const result = await wikiRequest(route, repo, `wiki/search?${search}`, { method: "GET" });
   return Array.isArray(result && result.results) ? result.results : [];
 }
 
 async function getWikiPage(route, repo, slug) {
-  return request(route, repoPath(repo, `wiki/pages/${encodeURIComponent(slug)}`), { method: "GET" });
+  return wikiRequest(route, repo, `wiki/pages/${encodeURIComponent(slug)}`, { method: "GET" });
 }
 
 async function listUserRepos(route) {

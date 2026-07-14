@@ -1,6 +1,6 @@
 {
   "name": "clawmem-codex-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "ClawMem durable memory plugin for Codex. Bundles a Codex skill, lifecycle hooks (behind the codex_hooks feature flag), and launches the shared clawmem-mcp-server over stdio.",
   "repository": {

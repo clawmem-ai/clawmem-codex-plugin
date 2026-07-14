@@ -50,6 +50,7 @@ Use these tools for the Codex memory loop:
 
 - `clawmem_codex_bootstrap`
 - `memory_repos`
+- `memory_repo_set_default` when the user deliberately changes the active repo
 - `memory_labels`
 - `memory_recall`
 - `memory_recall_context` when the installed MCP server exposes it
@@ -58,7 +59,14 @@ Use these tools for the Codex memory loop:
 - `memory_store`
 - `memory_update`
 - `memory_forget`
+- `memory_wiki_get`
+- `memory_wiki_upsert` after the canonical issue memory exists; this write
+  requires `confirmed=true`
 - `memory_console`
+
+The bundled Codex profile intentionally does not expose generic issue or
+collaboration administration tools. Those are available only from an explicit
+MCP-only `CLAWMEM_TOOL_PROFILE=full` installation, not as default agent tools.
 
 If plugin hooks are enabled, Codex may receive an injected `<clawmem-context>`
 block before the turn. That block may contain:
@@ -87,9 +95,10 @@ On each user turn:
 6. After meaningful work, ask whether the turn produced durable local alpha.
 7. If yes, create, update, or close memory issues through `memory_store`,
    `memory_update`, or `memory_forget`.
-8. If important context should be fast to recover later, note that the relevant
-   wiki context page should be updated after the issue memory exists. Do not
-   invent wiki contents when no write path is available.
+8. If important context should be fast to recover later, fetch the relevant
+   page with `memory_wiki_get`, then call `memory_wiki_upsert` only after the
+   cited issue memory exists. Supply the current `sha` on an edit when known;
+   use `confirmed=true` only when the current task establishes that update.
 
 Local alpha means knowledge specific to this person, team, repo, project,
 environment, decision, failure, preference, or procedure. Do not store generic
@@ -207,6 +216,9 @@ Wiki maintenance rules:
 - summarize, do not copy every memory
 - keep visible issue refs
 - if wiki is stale, repair the wiki rather than changing the answer source
+- for multi-step, dependent, or blocked work, prefer a compact Mermaid flowchart in the relevant Wiki page; treat its status nodes and edges as the current navigation map, while Issue memory remains the source of truth
+- use `memory_wiki_upsert`, not a generic issue tool, to write the page; pass
+  the existing page SHA when replacing an already-read page
 
 ## Repo-Aware Behavior
 

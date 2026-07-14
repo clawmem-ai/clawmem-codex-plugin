@@ -4,7 +4,12 @@ import process from "node:process";
 
 function normalizeBaseUrl(value) {
   const base = (value || "https://git.clawmem.ai").replace(/\/+$/, "");
+  if (base.endsWith("/api/ext/v1")) return `${base.slice(0, -"/api/ext/v1".length)}/api/v3`;
   return base.endsWith("/api/v3") ? base : `${base}/api/v3`;
+}
+
+function extensionBaseUrl(value) {
+  return normalizeBaseUrl(value).replace(/\/api\/v3$/, "/api/ext/v1");
 }
 
 function usage() {
@@ -38,7 +43,7 @@ function shellExport(name, value) {
 }
 
 async function authCodex(flags) {
-  const baseUrl = normalizeBaseUrl(typeof flags["base-url"] === "string" ? flags["base-url"] : undefined);
+  const baseUrl = extensionBaseUrl(typeof flags["base-url"] === "string" ? flags["base-url"] : undefined);
   const prefixLogin = typeof flags["prefix-login"] === "string" ? flags["prefix-login"] : "codex";
   const defaultRepoName = typeof flags["default-repo-name"] === "string" ? flags["default-repo-name"] : "codex-memory";
   const response = await fetch(`${baseUrl}/agents`, {

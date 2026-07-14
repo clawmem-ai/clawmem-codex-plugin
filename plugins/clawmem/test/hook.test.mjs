@@ -46,40 +46,38 @@ function runHook(input, env) {
 test("UserPromptSubmit hook injects wiki-aware recall context", async () => {
   const tempDir = fs.mkdtempSync(`${os.tmpdir()}/clawmem-codex-hook-`);
   const issue = memoryIssue();
-  const events = [];
-
   const server = http.createServer((req, res) => {
-    let body = "";
-    req.on("data", (chunk) => { body += String(chunk); });
+    req.on("data", () => {});
     req.on("end", () => {
       if (req.url?.startsWith("/api/v3/search/issues")) {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ items: [issue] }));
         return;
       }
-      if (req.url?.startsWith("/api/v3/repos/tester/memory/wiki/search")) {
+      if (req.url?.startsWith("/api/ext/v1/repos/tester/memory/wiki/search")) {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({ results: [{ slug: "projects/codex", title: "Codex Plugin" }] }));
         return;
       }
-      if (req.url === "/api/v3/repos/tester/memory/wiki/pages/projects%2Fcodex") {
+      if (req.url === "/api/ext/v1/repos/tester/memory/wiki/pages/projects%2Fcodex") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify({
           slug: "projects/codex",
           title: "Codex Plugin",
-          body: "Codex plugin context map refs #9."
+          body: [
+            "Codex plugin context map refs #9.",
+            "",
+            "```mermaid",
+            "flowchart LR",
+            "  recalled --> next",
+            "```"
+          ].join("\n")
         }));
         return;
       }
       if (req.url === "/api/v3/repos/tester/memory/issues/9") {
         res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify(issue));
-        return;
-      }
-      if (req.url === "/api/v3/clawmem/events" && req.method === "POST") {
-        events.push(JSON.parse(body || "{}"));
-        res.writeHead(201, { "content-type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
         return;
       }
       res.writeHead(404, { "content-type": "application/json" });
@@ -118,7 +116,8 @@ test("UserPromptSubmit hook injects wiki-aware recall context", async () => {
     assert.match(context, /<clawmem-wiki-contexts>/);
     assert.match(context, /Codex plugin recall uses OpenClaw-style query planning/);
     assert.match(context, /Wiki anchors: projects\/codex/);
-    assert.equal(events[0]?.type, "recall_success");
+    assert.match(context, /flowchart LR/);
+    assert.match(context, /recalled --> next/);
   } finally {
     await new Promise((resolveClose) => server.close(resolveClose));
   }
