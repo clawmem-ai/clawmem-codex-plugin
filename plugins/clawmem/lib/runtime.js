@@ -7,6 +7,7 @@ const { nowIso, slugify, todayIsoDate } = require("./util");
 const MAX_WIKI_CONTEXT_PAGES = 3;
 const MAX_WIKI_REF_MEMORY_FETCHES = 6;
 const WIKI_EXCERPT_CHARS = 1600;
+const MAX_MERMAID_CONTEXT_CHARS = 1200;
 const MEMORY_CONTEXT_CHARS = 1200;
 const DEFAULT_LITERAL_REPAIR_SLOTS = 1;
 const DEFAULT_PLANNER_VARIANT_LIMIT = 6;
@@ -113,7 +114,7 @@ async function ensureRoute() {
     type: "bootstrap_success",
     repo: registered.defaultRepo,
     login: registered.login,
-    method: registered.bootstrapMethod || "/api/v3/agents"
+    method: registered.bootstrapMethod || "/api/ext/v1/agents"
   });
   return registered;
 }
@@ -658,7 +659,15 @@ function wikiRefLineScore(line, queryTokens) {
 
 function wikiContextExcerpt(markdown, query, refs, maxChars = WIKI_EXCERPT_CHARS) {
   const text = stripIssueReferenceIgnoredMarkdown(String(markdown || "")).replace(/\r/g, "\n").trim();
-  if (!text) return "";
+  const mermaid = compactMermaidBlock(markdown, query, Math.min(maxChars, MAX_MERMAID_CONTEXT_CHARS));
+  if (!text && !mermaid) return "";
+  const narrativeBudget = mermaid ? Math.max(0, maxChars - mermaid.length - 2) : maxChars;
+  const narrative = text ? wikiNarrativeExcerpt(text, query, refs, narrativeBudget) : "";
+  return mermaid ? [narrative, mermaid].filter(Boolean).join("\n\n") : narrative;
+}
+
+function wikiNarrativeExcerpt(text, query, refs, maxChars) {
+  if (maxChars <= 0) return "";
   const queryTokens = wikiRefQueryTokens(query);
   const refSet = new Set(refs.slice(0, 10));
   const scored = [];
@@ -677,6 +686,20 @@ function wikiContextExcerpt(markdown, query, refs, maxChars = WIKI_EXCERPT_CHARS
   scored.sort((a, b) => b.score - a.score || a.index - b.index);
   const selected = scored.slice(0, 8).sort((a, b) => a.index - b.index).map((item) => item.line).join("\n");
   return compactText(selected, maxChars);
+}
+
+function compactMermaidBlock(markdown, query, maxChars) {
+  if (maxChars <= 0) return "";
+  const queryTokens = wikiRefQueryTokens(query);
+  const blocks = [...String(markdown || "").matchAll(/```mermaid[^\n]*\n[\s\S]*?```/gi)]
+    .map((match, index) => ({
+      text: match[0].trim(),
+      index,
+      score: wikiRefLineScore(match[0], queryTokens)
+    }))
+    .filter((block) => block.text.length <= maxChars);
+  blocks.sort((a, b) => b.score - a.score || a.index - b.index);
+  return blocks[0] ? blocks[0].text : "";
 }
 
 function localIssueNumbers(refs, repo) {

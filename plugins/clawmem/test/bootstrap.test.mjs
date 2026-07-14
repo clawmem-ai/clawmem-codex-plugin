@@ -13,7 +13,7 @@ function startFakeBackend(token = "test-token") {
     let body = "";
     req.on("data", (chunk) => { body += String(chunk); });
     req.on("end", () => {
-      if (req.url === "/api/v3/agents" && req.method === "POST") {
+      if (req.url === "/api/ext/v1/agents" && req.method === "POST") {
         let repoName = "codex-memory";
         try {
           const payload = JSON.parse(body || "{}");
@@ -42,7 +42,7 @@ function startFakeBackend(token = "test-token") {
     server.listen(0, "127.0.0.1", () => {
       const { port } = server.address();
       resolveBackend({
-        baseUrl: `http://127.0.0.1:${port}/api/v3`,
+        baseUrl: `http://127.0.0.1:${port}`,
         close: () => new Promise((resolveClose) => server.close(resolveClose)),
       });
     });

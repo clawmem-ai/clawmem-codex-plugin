@@ -2,10 +2,11 @@
   "mcpServers": {
     "clawmem": {
       "command": "npx",
-      "args": ["-y", "clawmem-mcp-server"],
+      "args": ["-y", "clawmem-mcp-server@^0.1.9"],
       "env": {
         "CLAWMEM_STATE_DIR": "~/.local/state/clawmem",
-        "CLAWMEM_AGENT_PREFIX": "codex"
+        "CLAWMEM_AGENT_PREFIX": "codex",
+        "CLAWMEM_TOOL_PROFILE": "skill"
       }
     }
   }
