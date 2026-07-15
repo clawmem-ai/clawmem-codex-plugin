@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const github = require("../lib/github.js");
-const { formatRecallContext, recall, recallWithContext } = require("../lib/runtime.js");
+const { ensureRoute, formatRecallContext, recall, recallWithContext } = require("../lib/runtime.js");
 
 function patchGithub(patches) {
   const originals = {};
@@ -24,6 +27,45 @@ function memoryIssue({ number, title = "Memory", detail, state = "open", labels 
   ].join("\n");
   return { number, title, body, state, labels };
 }
+
+test("ensureRoute registers the Codex prefix without a project-directory suffix", async () => {
+  const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "clawmem-codex-runtime-prefix-"));
+  const previous = {
+    CLAWMEM_AGENT_PREFIX: process.env.CLAWMEM_AGENT_PREFIX,
+    CLAWMEM_STATE_DIR: process.env.CLAWMEM_STATE_DIR,
+    CLAWMEM_BASE_URL: process.env.CLAWMEM_BASE_URL,
+    CLAWMEM_DEFAULT_REPO_NAME: process.env.CLAWMEM_DEFAULT_REPO_NAME,
+  };
+  process.env.CLAWMEM_AGENT_PREFIX = "codex";
+  process.env.CLAWMEM_STATE_DIR = stateDir;
+  process.env.CLAWMEM_BASE_URL = "https://git.example.test";
+  process.env.CLAWMEM_DEFAULT_REPO_NAME = "memory";
+  let registration = null;
+  const restore = patchGithub({
+    registerAgent: async (input) => {
+      registration = input;
+      return {
+        login: "codex-123abc",
+        token: "token",
+        defaultRepo: "codex-123abc/memory",
+        baseUrl: "https://git.example.test/api/v3",
+      };
+    },
+  });
+
+  try {
+    await ensureRoute();
+    assert.equal(registration.prefixLogin, "codex");
+    assert.equal(registration.defaultRepoName, "memory");
+  } finally {
+    restore();
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+    fs.rmSync(stateDir, { recursive: true, force: true });
+  }
+});
 
 test("recallWithContext boosts memories referenced by wiki context maps", async () => {
   const viewed = [];
